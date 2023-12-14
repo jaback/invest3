@@ -15,7 +15,7 @@ class NegotiationNotesFields(Enum):
     settlement_fee = 'Taxa de Liquidação'
     registration_fee = 'Taxa de Registro'
     fees = 'Emolumentos'
-    amount = "Valor das Operações"
+    operations = "Valor das Operações"
     tickets = []
 
 class NegotiationNotesTickets(Enum):
@@ -70,8 +70,8 @@ def load_negotiation_notes(path):
                     negotiation_note[NegotiationNotesFields.registration_fee.name] = to_float(text_list[i + 1])
                 elif word == NegotiationNotesFields.fees.value:
                     negotiation_note[NegotiationNotesFields.fees.name] = to_float(text_list[i + 1])
-                elif word == NegotiationNotesFields.amount.value:
-                    negotiation_note[NegotiationNotesFields.amount.name] = to_float(text_list[i + 2])
+                elif word == NegotiationNotesFields.operations.value:
+                    negotiation_note[NegotiationNotesFields.operations.name] = to_float(text_list[i + 2])
                 elif word == NegotiationNotesTickets.market.value:
                     ticket = {}
                     ticket_name = text_list[i + 3].split()[0]
@@ -86,8 +86,12 @@ def load_negotiation_notes(path):
                             index += 1
                             amount = int(text_list[index])
                         except:
-                            index += 1
-                            amount = int(text_list[index])    
+                            try:
+                                index += 1
+                                amount = int(text_list[index])
+                            except:
+                                index += 1
+                                amount = int(text_list[index])    
                     ticket[NegotiationNotesTickets.amount.name] = amount
                     index += 1
                     ticket[NegotiationNotesTickets.price.name] = to_float(text_list[index])
