@@ -2,7 +2,7 @@ import datetime
 import platform
 import csv 
 from pathlib import Path
-from negotiation_notes import load_negotiation_notes, NegotiationNotesFields, NegotiationNotesTickets
+from negotiation_notes import to_float, load_negotiation_notes, NegotiationNotesFields, NegotiationNotesTickets
 
 
 os = platform.system()
@@ -47,7 +47,25 @@ def extract_rows(coll_negotiation_notes, rows):
 
             rows.append(line)
 
-    rows.sort(key=lambda x: x[0])
+
+def read_start_position(rows):
+    with open(f'{input_path}p0.csv', 'r') as f:
+        for row in csv.reader(f):
+            try:
+                index_ticket = 0
+                index_type = 1
+                index_amount = 2
+                index_cost = 11
+
+                extra = [''] * (index_cost + 1)
+                extra[index_ticket] = row[0]
+                extra[index_type] = 'C'
+                extra[index_amount] = int(row[1])
+                extra[index_cost] = round(to_float(row[2]), 2)
+
+                rows.insert(0, extra)
+            except:
+                pass
 
 
 def sum_tickets(rows, group_rows):
@@ -114,6 +132,8 @@ if __name__ == '__main__':
     
     rows = []
     extract_rows(coll_negotiation_notes, rows)
+    read_start_position(rows)
+    rows.sort(key=lambda x: x[0])
     print(f'rows: {len(rows)}')
 
     group_rows = []
