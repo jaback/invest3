@@ -9,6 +9,13 @@ os = platform.system()
 year = datetime.date.today().year
 input_path = Path(f'{Path.home()}/Documents/NuInvest/{year}') if os == "Linux" else Path(f'{Path.home()}\\Documents\\NuInvest\\{year}')
     
+index_ticket = 0
+index_type = 1
+index_amount = 2
+index_cost = 11
+index_average = 12
+index_desc = 13
+
 
 def extract_rows(coll_negotiation_notes, rows):
     for i in coll_negotiation_notes:
@@ -44,6 +51,7 @@ def extract_rows(coll_negotiation_notes, rows):
             line.append(round(proportional, 2))
             line.append(round(cost, 2))
             line.append(round(average, 2))
+            line.append(i[NegotiationNotesFields.file.name])
 
             rows.append(line)
 
@@ -52,16 +60,13 @@ def read_start_position(rows):
     with open(f'{input_path}p0.csv', 'r') as f:
         for row in csv.reader(f):
             try:
-                index_ticket = 0
-                index_type = 1
-                index_amount = 2
-                index_cost = 11
-
-                extra = [''] * (index_cost + 1)
+                extra = [''] * (index_desc + 1)
                 extra[index_ticket] = row[0]
                 extra[index_type] = 'C'
                 extra[index_amount] = int(row[1])
                 extra[index_cost] = round(to_float(row[2]), 2)
+                extra[index_average] = round(to_float(row[2]) / int(row[1]), 2)
+                extra[index_desc] = f'{year}p0.csv'
 
                 rows.insert(0, extra)
             except:
@@ -69,35 +74,48 @@ def read_start_position(rows):
 
 
 def sum_tickets(rows, group_rows):
-    index_ticket = 0
-    index_type = 1
-    index_amount = 2
-    index_cost = 11
-
     last_ticket = rows[0][index_ticket]
     sum_amount = 0
     sum_cost = 0
 
     for i in rows:
+        is_C = i[index_type] == 'C'
+
         if (last_ticket != i[index_ticket]):
-            add_extra_line(group_rows, index_ticket, index_amount, index_cost, last_ticket, sum_amount, sum_cost)
-            sum_amount = i[index_amount] if i[index_type] == 'C' else (i[index_amount] * -1)
-            sum_cost = i[index_cost] if i[index_type] == 'C' else (i[index_cost] * -1)
+            add_extra_line(group_rows, last_ticket, sum_amount, sum_cost, True)
+            sum_amount = i[index_amount] if is_C else (i[index_amount] * -1)
+            sum_cost = i[index_cost] if is_C else (i[index_cost] * -1)
+            group_rows.append(i)
         else:
-            sum_amount = (sum_amount + i[index_amount]) if i[index_type] == 'C' else (sum_amount - i[index_amount])
-            sum_cost = (sum_cost + i[index_cost]) if i[index_type] == 'C' else (sum_cost - i[index_cost])
+            if not is_C:
+                group_rows.append(i)
+                average_last = sum_cost / sum_amount
+                average_V = i[index_cost] / i[index_amount]
+                average_diff = average_V - average_last
+                sum_amount -= i[index_amount]
+                sum_cost -= i[index_cost]
+                add_extra_line(group_rows, last_ticket, sum_amount, (average_diff * i[index_amount]), False)
+            else:
+                sum_amount += i[index_amount]    
+                sum_cost += i[index_cost]
+                group_rows.append(i)
             
         last_ticket = i[index_ticket]
-        group_rows.append(i)
 
-    add_extra_line(group_rows, index_ticket, index_amount, index_cost, last_ticket, sum_amount, sum_cost)
+    add_extra_line(group_rows, last_ticket, sum_amount, sum_cost, True)
 
 
-def add_extra_line(group_rows, index_ticket, index_amount, index_cost, last_ticket, sum_amount, sum_cost):
-    extra = [''] * (index_cost + 1)
+def add_extra_line(group_rows, last_ticket, sum_amount, sum_cost, is_resume):
+    extra = [''] * (index_desc + 1)
     extra[index_ticket] = last_ticket
     extra[index_amount] = sum_amount
-    extra[index_cost] = round(sum_cost, 2) if sum_amount > 0 else 0
+    if is_resume:
+        extra[index_cost] = round(sum_cost, 2) if sum_amount > 0 else 0
+        extra[index_average] = round(sum_cost / sum_amount, 2) if (sum_amount > 0) else None
+        extra[index_desc] = '*** RESUME ***' 
+    else:
+        extra[index_cost] = round(sum_cost, 2)
+        extra[index_desc] = 'partial' 
     group_rows.append(extra)
 
 
@@ -128,7 +146,8 @@ if __name__ == '__main__':
         'NC', 
         'proportional', 
         'cost',
-        'average']
+        'average',
+        'description']
     
     rows = []
     extract_rows(coll_negotiation_notes, rows)

@@ -17,6 +17,7 @@ class NegotiationNotesFields(Enum):
     fees = 'Emolumentos'
     operations = "Valor das Operações"
     tickets = []
+    file = ''
 
 class NegotiationNotesTickets(Enum):
     market = 'BOVESPA'
@@ -50,6 +51,7 @@ def load_negotiation_notes(path):
             negotiation_note = {}
             tickets = []
             
+            negotiation_note[NegotiationNotesFields.file.name] = file_name
             for i in range(len(text_list)):
                 word = text_list[i]
                 if word == NegotiationNotesFields.id.value:
